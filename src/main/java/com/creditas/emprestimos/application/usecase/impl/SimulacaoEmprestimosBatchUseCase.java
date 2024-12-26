@@ -4,6 +4,8 @@ import com.creditas.emprestimos.application.usecase.SimulacaoBatchUseCase;
 import com.creditas.emprestimos.application.usecase.SimulacaoUseCase;
 import com.creditas.emprestimos.domain.model.SimulacaoRequest;
 import com.creditas.emprestimos.domain.model.SimulacaoResponse;
+import org.openapitools.model.EmprestimoRequest;
+import org.openapitools.model.EmprestimoResponse;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -21,17 +23,17 @@ public class SimulacaoEmprestimosBatchUseCase implements SimulacaoBatchUseCase {
     public SimulacaoEmprestimosBatchUseCase(SimulacaoUseCase simulacaoUseCase) {
         this.simulacaoUseCase = simulacaoUseCase;
         this.executor = Executors.newVirtualThreadPerTaskExecutor();
-        this.semaphore = new Semaphore(1000);
+        this.semaphore = new Semaphore(100);
     }
 
 
     @Override
-    public List<SimulacaoResponse> execute(List<SimulacaoRequest> requests) {
-        List<Future<SimulacaoResponse>> futuros = new ArrayList<>();
-        for (SimulacaoRequest objeto : requests) {
+    public List<EmprestimoResponse> execute(List<EmprestimoRequest> requests) {
+        List<Future<EmprestimoResponse>> futuros = new ArrayList<>();
+        requests.forEach(objeto -> {
             try {
                 semaphore.acquire();
-                Future<SimulacaoResponse> futuro = executor.submit(() -> {
+                Future<EmprestimoResponse> futuro = executor.submit(() -> {
                     try {
                         return simulacaoUseCase.execute(objeto);
                     } finally {
@@ -43,14 +45,14 @@ public class SimulacaoEmprestimosBatchUseCase implements SimulacaoBatchUseCase {
                 Thread.currentThread().interrupt();
                 System.err.println("Thread interrompida: " + e.getMessage());
             }
-        }
+        });
         var results =  coletarResultados(futuros);
         return results;
     }
 
-    private List<SimulacaoResponse> coletarResultados(List<Future<SimulacaoResponse>> futuros) {
-        List<SimulacaoResponse> resultados = new ArrayList<>();
-        for (Future<SimulacaoResponse> futuro : futuros) {
+    private List<EmprestimoResponse> coletarResultados(List<Future<EmprestimoResponse>> futuros) {
+        List<EmprestimoResponse> resultados = new ArrayList<>();
+        for (Future<EmprestimoResponse> futuro : futuros) {
             try {
                 resultados.add(futuro.get());
             } catch (InterruptedException e) {
